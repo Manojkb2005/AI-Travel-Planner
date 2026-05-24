@@ -244,7 +244,7 @@ with col1:
 
     interests = st.text_input(
         "🎯 Interests",
-        "food, nightlife, anime, adventure"
+        "food, Culture, adventure"
     )
 
     generate = st.button("✨ Generate Smart Itinerary")
