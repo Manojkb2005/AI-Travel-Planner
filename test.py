@@ -1,6 +1,10 @@
 import streamlit as st
 from groq import Groq
-
+from dotenv import load_dotenv
+import os
+load_dotenv()
+API_KEY = os.getenv("GROQ_API_KEY")
+client = Groq(api_key=API_KEY)
 st.set_page_config(
     page_title="AI Travel Planner",
     page_icon="✈️",
@@ -176,9 +180,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-API_KEY = "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"
-
-client = Groq(api_key=API_KEY)
 
 with st.sidebar:
 
@@ -255,7 +256,7 @@ with col2:
 
     st.image(
         "https://images.unsplash.com/photo-1488646953014-85cb44e25828",
-        use_container_width=True
+         width="stretch"
     )
 
 if generate:
