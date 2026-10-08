@@ -1,16 +1,25 @@
 import streamlit as st
-from groq import Groq
+import requests
 from dotenv import load_dotenv
 import os
+
 load_dotenv()
-API_KEY = os.getenv("GROQ_API_KEY")
-client = Groq(api_key=API_KEY)
+
+
+API_KEY = os.getenv("OPENROUTER_API_KEY")
+URL = "https://openrouter.ai/api/v1/chat/completions"
+MODEL = os.getenv("OPENROUTER_MODEL", "apodex/apodex-1.1-mini:free")
+
+
+USE_REASONING = False
+
 st.set_page_config(
     page_title="AI Travel Planner",
     page_icon="✈️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
 st.markdown("""
 <style>
 
@@ -83,21 +92,7 @@ st.markdown("""
     animation: fadeIn 3s ease;
 }
 
-/* Glass Card */
-.card {
-    background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.1);
-    backdrop-filter: blur(14px);
-    padding: 30px;
-    border-radius: 25px;
-    box-shadow: 0px 8px 32px rgba(0,0,0,0.35);
-    transition: 0.4s;
-}
 
-.card:hover {
-    transform: translateY(-8px);
-    box-shadow: 0px 12px 35px rgba(56,189,248,0.25);
-}
 
 /* Inputs */
 .stTextInput input,
@@ -180,6 +175,48 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
+def generate_with_openrouter(prompt: str) -> str:
+    
+    if not API_KEY:
+        raise ValueError(
+            "OPENROUTER_API_KEY not found. Add it to your .env file."
+        )
+
+    headers = {
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json",
+    }
+
+    payload = {
+        "model": MODEL,
+        "messages": [
+            {"role": "user", "content": prompt}
+        ],
+        "reasoning": {"enabled": USE_REASONING},
+    }
+
+    response = requests.post(
+        URL,
+        headers=headers,
+        json=payload,
+        timeout=120,
+    )
+
+    if not response.ok:
+        raise RuntimeError(
+            f"OpenRouter error {response.status_code}: {response.text}"
+        )
+
+    data = response.json()
+    content = data["choices"][0]["message"].get("content")
+
+    if not content:
+        raise RuntimeError(
+            "The model returned an empty response. Please try again."
+        )
+
+    return content
+
 
 with st.sidebar:
 
@@ -249,14 +286,13 @@ with col1:
     )
 
     generate = st.button("✨ Generate Smart Itinerary")
-
     st.markdown("</div>", unsafe_allow_html=True)
-
+    st.markdown("Note: if model shows error, please click generate again")
 with col2:
 
     st.image(
         "https://images.unsplash.com/photo-1488646953014-85cb44e25828",
-         width="stretch"
+        width="stretch"
     )
 
 if generate:
@@ -288,21 +324,7 @@ if generate:
         with st.spinner(
             "🌏 AI is crafting your dream journey..."
         ):
-
-            response = client.chat.completions.create(
-                model="llama-3.1-8b-instant",
-                messages=[
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ]
-            )
-
-            travel_plan = (
-                response.choices[0]
-                .message.content
-            )
+            travel_plan = generate_with_openrouter(prompt)
 
         st.markdown(
             "## 🗺️ Your Personalized AI Itinerary"
@@ -313,7 +335,6 @@ if generate:
             unsafe_allow_html=True
         )
 
-        # Download Button
         file_name = (
             f"Travel_Plan_"
             f"{destination.replace(' ', '_')}.txt"
@@ -331,6 +352,6 @@ if generate:
         st.error(f"Error: {str(e)}")
 
 st.markdown(
-    "<div class='footer'>Built with ❤️ using Streamlit + Groq AI</div>",
+    "<div class='footer'>Built with ❤️ using Streamlit </div>",
     unsafe_allow_html=True
 )
